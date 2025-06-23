@@ -1,0 +1,52 @@
+<!DOCTYPE html><html lang="ru"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Рулетка NFT</title>
+  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>NFT Lucky Gifts </h1>
+    <h1><span style="color:#8092F6 ;">рулетка</span></h1>
+    <div class="carousel-wrapper">
+      <div id="loading-indicator">Загрузка подарков...</div>
+      <div id="carousel" class="carousel"></div>
+      <div id="pointer"></div>
+    </div>
+    <div class="button-group">
+      <button id="spin" class="btn" disabled="">Крутить бесплатно</button>
+    </div>
+    <div id="timer">Следующее вращение: <span id="countdown">00:00:00</span></div>
+  </div>
+
+  <div id="modal">
+    <div class="dialog">
+      <h2>🎉 Ваш приз:</h2>
+      <img id="prize-img" src="" alt="Подарок">
+      <p id="prize-name"></p>
+      <button id="connect" class="btn">Получить подарок</button>
+    </div>
+  </div>
+
+  <nav>
+    <a class="active"><i class="fas fa-home"></i> Главная</a>
+    <a href="/tasks"><i class="fas fa-tasks"></i> Задания</a>
+    <a href="/profile"><i class="fas fa-user"></i> Профиль</a>
+  </nav>
+
+  <script src="script.js"></script>
+  <script>
+    document.getElementById("connect").addEventListener("click", () => {
+    const modal = document.getElementById("modal");
+    modal.classList.add("hidden");
+
+    // если хочешь полностью скрыть с экрана:
+    setTimeout(() => {
+      modal.style.display = "none";
+    }, 300);
+  });
+  </script>
+
+</body></html>
